@@ -3,8 +3,23 @@ from tensorflow.keras.models import load_model
 import pickle
 from flask import request, redirect
 from tensorflow.keras.preprocessing.sequence import pad_sequences
+from flask_mysqldb import MySQL
+import yaml
+
+db = yaml.load(open('db.yaml'))
+
 
 app = Flask(__name__)
+
+app.config['MYSQL_HOST'] = db['mysql_host']
+app.config['MYSQL_USER'] = db['mysql_user']
+app.config['MYSQL_PASSWORD'] = db['mysql_password']
+app.config['MYSQL_DB'] = db['mysql_db']
+
+mysql = MySQL(app)
+
+
+
 @app.route('/')
 def home():
     return render_template('index.html', pred_text = None)
@@ -29,10 +44,22 @@ def predict():
             output_text += ' ' + pred_word
 
         
-        print(output_text)
+        
         return render_template('index.html', pred_text = output_text)
 
     
+
+@app.route('/send_feedback', methods=["POST", "GET"])
+def send_feedback():
+    if request.method == 'POST':
+        req = request.form
+        
+        cur = mysql.connection.cursor()
+        cur.execute("INSERT INTO users(name, email, comment) VALUES(%s, %s, %s)",(req['Name'], req['Email'], req['Message']))
+        mysql.connection.commit()
+        cur.close()
+
+    return render_template('index.html')
 
 
 
