@@ -1,23 +1,23 @@
 from flask import Flask, render_template
-from tensorflow.keras.models import load_model
 import pickle
+from flask_sqlalchemy import SQLAlchemy
+app = Flask(__name__)
+db = SQLAlchemy(app)
+
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50))
+    email = db.Column(db.String(50))
+    comment = db.Column(db.String(50))
+
+
 from flask import request, redirect
-from tensorflow.keras.preprocessing.sequence import pad_sequences
+
 from flask_mysqldb import MySQL
 import yaml
 
-db = yaml.load(open('db.yaml'))
-
-
-app = Flask(__name__)
-
-app.config['MYSQL_HOST'] = db['mysql_host']
-app.config['MYSQL_USER'] = db['mysql_user']
-app.config['MYSQL_PASSWORD'] = db['mysql_password']
-app.config['MYSQL_DB'] = db['mysql_db']
-
-mysql = MySQL(app)
-
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite3'
 
 
 @app.route('/')
@@ -27,7 +27,9 @@ def home():
 @app.route('/predict',  methods=['POST','GET'] )
 def predict():
     if request.method == "POST":
-        model = load_model('model.h5')
+        from tensorflow.keras.preprocessing.sequence import pad_sequences
+        from tensorflow.keras.models import load_model
+        model = load_model('model_save.h5')
         pickle_in = open("token_dump","rb")
         tokenizer = pickle.load(pickle_in)
         req = request.form
@@ -54,17 +56,15 @@ def send_feedback():
     if request.method == 'POST':
         req = request.form
         
-        cur = mysql.connection.cursor()
-        cur.execute("INSERT INTO users(name, email, comment) VALUES(%s, %s, %s)",(req['Name'], req['Email'], req['Message']))
-        mysql.connection.commit()
-        cur.close()
+        user = User(name=req['Name'], email=req['Email'], comment = req['Message'])
+        db.session.add(user)
+        db.session.commit()
 
-    return render_template('index.html')
-
-
+    return render_template('index.html', pred_text = "Thank You for feedback!:)")
 
 
 if __name__ == '__main__':
    app.run(debug = True)
+
 
      
