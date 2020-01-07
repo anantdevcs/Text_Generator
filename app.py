@@ -29,7 +29,7 @@ def predict():
     if request.method == "POST":
         from tensorflow.keras.preprocessing.sequence import pad_sequences
         from tensorflow.keras.models import load_model
-        model = load_model('model_save.h5')
+        model = load_model('model.h5')
         pickle_in = open("token_dump","rb")
         tokenizer = pickle.load(pickle_in)
         req = request.form
